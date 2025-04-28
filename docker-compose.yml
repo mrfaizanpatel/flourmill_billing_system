@@ -1,39 +1,47 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  frontend:
-    build:
-      context: ./flourmill_front
-      dockerfile: flourmill_front/Dockerfile
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
-
   backend:
     build:
       context: ./atta-chakki
-      dockerfile: atta-chakki/Dockerfile
+      dockerfile: Dockerfile
+    container_name: spring-backend
     ports:
       - "8000:8000"
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://database:5432/atta-chakki
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=root
+    networks:
+      - app-network
     depends_on:
-      - database
+      - db
 
-  database:
-    image: postgres:latest
+  frontend:
+    build:
+      context: ./flourmill_front
+      dockerfile: Dockerfile
+    container_name: angular-frontend
+    ports:
+      - "3000:80"
+    networks:
+      - app-network
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:13
+    container_name: postgres-db
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=root
-      - POSTGRES_DB=atta-chakki
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: attachakki
     ports:
       - "5432:5432"
+    networks:
+      - app-network
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  pgdata:
-    driver: local
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
