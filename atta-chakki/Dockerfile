@@ -1,33 +1,34 @@
-# Stage 1: Build Spring Boot app
-FROM ubuntu:22.04 AS build
+# Use a base image with OpenJDK
+FROM openjdk:17-jdk-slim as build
 
-# Install Maven and OpenJDK 17
-RUN apt-get update && apt-get install -y maven openjdk-17-jdk
-
-# Set working directory
+# Set the working directory
 WORKDIR /app
 
-# Copy Maven project files
-COPY atta-chakki/pom.xml .
-COPY atta-chakki/src ./src
+# Copy the Maven wrapper and pom.xml
+COPY mvnw .
+COPY mvnw.cmd .
+COPY pom.xml .
 
-# Build app without running tests
-RUN mvn clean package -DskipTests
+# Download Maven dependencies (this will cache them if unchanged)
+RUN ./mvnw dependency:go-offline
 
-# Stage 2: Run Spring Boot app
-FROM ubuntu:22.04
+# Copy the source code into the container
+COPY src ./src
 
-# Install OpenJDK 17
-RUN apt-get update && apt-get install -y openjdk-17-jdk
+# Package the app into a JAR file using Maven
+RUN ./mvnw clean package -DskipTests
 
-# Set working directory
+# Create a smaller runtime image
+FROM openjdk:17-jdk-slim
+
+# Set the working directory for the runtime image
 WORKDIR /app
 
-# Copy the built jar file
+# Copy the JAR file from the build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Expose port 8000 inside container
+# Expose port 8000 for the Spring Boot app
 EXPOSE 8000
 
-# Run the app
+# Run the JAR file
 ENTRYPOINT ["java", "-jar", "app.jar"]
